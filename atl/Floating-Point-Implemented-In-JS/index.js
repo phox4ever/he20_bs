@@ -26,7 +26,6 @@ const encode = n => {
     exponent = (exponent + 15) & 0b11111;
   }
 
-
   const percentage = Math.round(1000 * (Math.abs(n) - lower) / (upper - lower)) / 1000;
 
   // Mantissa muss gerundet werden
@@ -62,11 +61,11 @@ const decode = n => {
 
   const percentage = mantissa / 1024;
 
-  return (-1)**sign * (wholePart + percentage) * 2**(exponent - 15);
+  return (-1)**sign * (wholePart + percentage) * 2**((exponent === 0 ? 1 : exponent) - 15);
 }
 
-function dec2bin(dec, s) {
-  return (dec >>> 0).toString(2).padStart(s, '0');
+const dec2bin = function(dec, s) {
+    return (dec >>> 0).toString(2).padStart(s, '0');
 }
 
 /*
@@ -95,6 +94,11 @@ const nums = [
 ]
 
 nums.forEach(n => {const e = encode(n);const d = decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS + 1)} (${e}) => ${d}`) })
+
+import float32 from './float32.js'
+import NON_SIGN_BITS32 from './float32.js'
+
+nums.forEach(n => {const e = float32.encode(n);const d = float32.decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS32 + 1)} (${e}) => ${d}`) })
 
 //console.log(`original: ${original}`);
 //console.log(`encoded: ${encoded}`);
