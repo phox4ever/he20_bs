@@ -77,6 +77,13 @@ const minusInfinityCheck = decode(0b1111110000000000);
 const nanCheck = decode(0b1111110000000001);
 */
 
+//console.log(`original: ${original}`);
+//console.log(`encoded: ${encoded}`);
+//console.log(`decoded: ${decoded}`);
+//console.log(`infinity: ${infinityCheck}`);
+//console.log(`-infinity: ${minusInfinityCheck}`);
+//console.log(`nan: ${nanCheck}`);
+
 const nums = [
     1720.5,
     172.8254,
@@ -95,14 +102,8 @@ const nums = [
 
 nums.forEach(n => {const e = encode(n);const d = decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS + 1)} (${e}) => ${d}`) })
 
-import float32 from './float32.js'
+import Float32 from './float32.js'
 import NON_SIGN_BITS32 from './float32.js'
 
-nums.forEach(n => {const e = float32.encode(n);const d = float32.decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS32 + 1)} (${e}) => ${d}`) })
+nums.forEach(n => {const e = Float32.encode(n);const d = Float32.decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS32 + 1)} (${e}) => ${d}`) })
 
-//console.log(`original: ${original}`);
-//console.log(`encoded: ${encoded}`);
-//console.log(`decoded: ${decoded}`);
-//console.log(`infinity: ${infinityCheck}`);
-//console.log(`-infinity: ${minusInfinityCheck}`);
-//console.log(`nan: ${nanCheck}`);

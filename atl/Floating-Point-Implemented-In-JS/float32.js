@@ -1,14 +1,14 @@
 // Bits:  0   1  2  3  4  5  6  7  8     9  10 11 12 13 14 15 16 17 18 19 ... 31
 // Type:  S   E  E  E  E  E  E  E  E     M  M  M  M  M  M  M  M  M  M  M      M
 
-const float32 = {};
-
 const EXP_BITS = 8;
 const MANTISSA_BITS = 23;
 const NON_SIGN_BITS = EXP_BITS + MANTISSA_BITS;
 const EXP_BIAS = 127;
 
-float32.encode = n => {
+const Float32 = {};
+
+Float32.encode = n => {
   const sign = Math.sign(1 / n) === -1 ? 1 : 0;
 
   if (n === 0) {
@@ -42,7 +42,7 @@ float32.encode = n => {
   return (sign << NON_SIGN_BITS) | (exponent << MANTISSA_BITS) | mantissa;
 };
 
-float32.decode = n => {
+Float32.decode = n => {
   const sign     = (n & 0b10000000000000000000000000000000) >> NON_SIGN_BITS;
   const exponent = (n & 0b01111111100000000000000000000000) >> MANTISSA_BITS;
   const mantissa = (n & 0b00000000011111111111111111111111);
@@ -70,5 +70,5 @@ const dec2bin = function(dec, s) {
   return (dec >>> 0).toString(2).padStart(s, '0');
 }
 
-export default float32
+export default Float32
 export const NON_SIGN_BITS32 = NON_SIGN_BITS;
