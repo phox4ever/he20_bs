@@ -2,9 +2,13 @@
 // Type:  S   E  E  E  E  E  E  E  E     M  M  M  M  M  M  M  M  M  M  M      M
 
 const EXP_BITS = 8;
+const EXP_MASK = 0b01111111100000000000000000000000;
 const MANTISSA_BITS = 23;
+const MANTISSA_MASK = 0b00000000011111111111111111111111
 const NON_SIGN_BITS = EXP_BITS + MANTISSA_BITS;
+const NON_SIGN_MASK = 0b10000000000000000000000000000000;
 const EXP_BIAS = 127;
+const EXP_BIAS_MASK = 0b1111111111;
 
 const Float32 = {};
 
@@ -17,19 +21,21 @@ Float32.encode = n => {
 
   //console.log(`Math.log(Math.abs(n)) == ${Math.log(Math.abs(n))} Math.log(2)) == ${Math.log(2)}`);
   let exponent = Math.floor(Math.log(Math.abs(n)) / Math.log(2));
-  const lower = 2**exponent;
-  const upper = 2**(exponent + 1);
+
+  // Bestimmen der Grenzwerte für die Berechnung der Matisse
+  const lower = exponent + EXP_BIAS > 0 ? 2**exponent : 0; // 0 falls denormalisierte Zahl
+  const upper = exponent + EXP_BIAS > 0 ? 2**(exponent + 1) : 2**((EXP_BIAS - 1) * -1); // 2^-(Bias-1) falls denormalisierte Zahl
   //console.log(`exponent: ${exponent}`);
 
   // Fehlende Prüfung auf exponent overflow
-  if (exponent + EXP_BIAS < 0 || exponent + EXP_BIAS > 255) {
-    exponent = 0 & 0b11111111;
+  if (exponent + EXP_BIAS < 0 || exponent + EXP_BIAS > 2 * EXP_BIAS + 1) {
+    exponent = 0 & EXP_BIAS_MASK;
   }
   else {
-    exponent = (exponent + EXP_BIAS) & 0b1111111111;
+    exponent = (exponent + EXP_BIAS) & EXP_BIAS_MASK;
   }
 
-  const percentage = Math.round(10**MANTISSA_BITS * (Math.abs(n) - lower) / (upper - lower)) / 10**MANTISSA_BITS;
+  const percentage = Math.round(10**(MANTISSA_BITS) * (Math.abs(n) - lower) / (upper - lower)) / 10**(MANTISSA_BITS);
 
   // Mantissa muss gerundet werden
   const mantissa = Math.round(2**MANTISSA_BITS * percentage);
@@ -43,9 +49,9 @@ Float32.encode = n => {
 };
 
 Float32.decode = n => {
-  const sign     = (n & 0b10000000000000000000000000000000) >> NON_SIGN_BITS;
-  const exponent = (n & 0b01111111100000000000000000000000) >> MANTISSA_BITS;
-  const mantissa = (n & 0b00000000011111111111111111111111);
+  const sign     = (n & NON_SIGN_MASK) >> NON_SIGN_BITS;
+  const exponent = (n & EXP_MASK) >> MANTISSA_BITS;
+  const mantissa = (n & MANTISSA_MASK);
 
   if (exponent === 0 && mantissa === 0) {
     return sign === 1 ? -0 : 0;
@@ -59,7 +65,7 @@ Float32.decode = n => {
     }
   }
 
-  const wholePart = exponent === 0 ? 0 : 1;
+  const wholePart = exponent === 0 ? 0 : 1; // 0 falls denormalisert, sonst 1
 
   const percentage = mantissa / 2**MANTISSA_BITS;
 

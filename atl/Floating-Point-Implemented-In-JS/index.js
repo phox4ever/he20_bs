@@ -4,32 +4,38 @@
 const EXP_BITS = 5;
 const MANTISSA_BITS = 10;
 const NON_SIGN_BITS = EXP_BITS + MANTISSA_BITS;
+const EXP_BIAS = 15;
 
+// Encodieren Dec zu Bin
 const encode = n => {
+
+  // Vorzeichen (+ oder -)
   const sign = Math.sign(1 / n) === -1 ? 1 : 0;
 
   if (n === 0) {
     return sign === 0 ? 0 : (1 << NON_SIGN_BITS);
   }
 
-  //console.log(`Math.log(Math.abs(n)) == ${Math.log(Math.abs(n))} Math.log(2)) == ${Math.log(2)}`);
+  // Berechnen des Exponenten mit Hilfe des Logarithmus zur Basis 10 und zur Basis 2
   let exponent = Math.floor(Math.log(Math.abs(n)) / Math.log(2));
-  const lower = 2**exponent;
-  const upper = 2**(exponent + 1);
-  //console.log(`exponent: ${exponent}`);
 
-  // Fehlende Prüfung auf exponent overflow
-  if (exponent + 15 < 0 || exponent + 15 > 31) {
-    exponent = 0 & 0b11111;
+  // Bestimmen der Grenzwerte für die Berechnung der Matisse
+  const lower = exponent + EXP_BIAS > 0 ? 2**exponent : 0; // 0 falls denormalisierte Zahl
+  const upper = exponent + EXP_BIAS > 0 ? 2**(exponent + 1) : 2**((EXP_BIAS - 1) * -1); // 2^-14 falls denormalisierte Zahl
+
+  // Prüfung auf Exponent Overflow und Underflow
+  if (exponent + EXP_BIAS < 0 || exponent + EXP_BIAS > 2 * EXP_BIAS + 1) {
+      exponent = 0 & 0b11111111;
   }
   else {
-    exponent = (exponent + 15) & 0b11111;
+      exponent = (exponent + EXP_BIAS) & 0b1111111111;
   }
 
+  // Berechnen der Mantisse in Prozent
   const percentage = Math.round(1000 * (Math.abs(n) - lower) / (upper - lower)) / 1000;
 
-  // Mantissa muss gerundet werden
-  const mantissa = Math.round(1024 * percentage);
+  // Runden der Mantisse
+  const mantissa = Math.round(2 ** MANTISSA_BITS * percentage);
 
   console.log(`sign: ${sign} exponent: ${exponent} percentage: ${percentage} mantissa: ${mantissa}`);
   console.log(`+`.padEnd(4, '-') + `+`.padEnd(EXP_BITS + 3, '-') + `+`.padEnd(MANTISSA_BITS + 3,'-') + `+`)
@@ -39,7 +45,7 @@ const encode = n => {
   return (sign << NON_SIGN_BITS) | (exponent << MANTISSA_BITS) | mantissa;
 };
 
-
+//Decodieren von Bin zu Dec
 const decode = n => {
   const sign     = (n & 0b1000000000000000) >> NON_SIGN_BITS;
   const exponent = (n & 0b0111110000000000) >> MANTISSA_BITS;
@@ -57,9 +63,9 @@ const decode = n => {
     }
   }
 
-  const wholePart = exponent === 0 ? 0 : 1;
+  const wholePart = exponent === 0 ? 0 : 1; // 0 falls denormalisert, sonst 1
 
-  const percentage = mantissa / 1024;
+  const percentage = mantissa / 2 ** MANTISSA_BITS;
 
   return (-1)**sign * (wholePart + percentage) * 2**((exponent === 0 ? 1 : exponent) - 15);
 }
@@ -97,13 +103,19 @@ const nums = [
     0.00172,
     0.000172,
     0.0000172,
+    0.00000002,
+    0.00000000000000000000000000000000000000172,
+    0.0000000000000000000000000000000000000002,
+    0.00000000000000000000000000000000000000002,
     -17.2,
 ]
 
-nums.forEach(n => {const e = encode(n);const d = decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS + 1)} (${e}) => ${d}`) })
-
+console.log ("Half Precision (16bit)")
+nums.forEach(n => {const e = encode(n);const d = decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS + 1)} (${e}) => ${d}`);console.log() })
+console.log()
+// Höhere Präzision mit single precision (32 bit)
 import Float32 from './float32.js'
 import NON_SIGN_BITS32 from './float32.js'
-
-nums.forEach(n => {const e = Float32.encode(n);const d = Float32.decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS32 + 1)} (${e}) => ${d}`) })
+console.log ("Single Precision (32bit)")
+nums.forEach(n => {const e = Float32.encode(n);const d = Float32.decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS32 + 1)} (${e}) => ${d}`);console.log() })
 
