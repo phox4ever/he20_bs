@@ -27,18 +27,22 @@ Float32.encode = n => {
   const upper = exponent + EXP_BIAS > 0 ? 2**(exponent + 1) : 2**((EXP_BIAS - 1) * -1); // 2^-(Bias-1) falls denormalisierte Zahl
   //console.log(`exponent: ${exponent}`);
 
-  // Fehlende Prüfung auf exponent overflow
-  if (exponent + EXP_BIAS < 0 || exponent + EXP_BIAS > 2 * EXP_BIAS + 1) {
+  const percentage = Math.round(10**(MANTISSA_BITS) * (Math.abs(n) - lower) / (upper - lower)) / 10**(MANTISSA_BITS);
+
+  // Mantissa muss gerundet werden
+  let mantissa = Math.round(2**MANTISSA_BITS * percentage);
+
+  // Prüfung auf Exponent Overflow und Underflow
+  if (exponent + EXP_BIAS < 0) {
     exponent = 0 & EXP_BIAS_MASK;
+  }
+  else if (exponent + EXP_BIAS > 2 * EXP_BIAS + 1) {
+    exponent = 2 * EXP_BIAS + 1 & EXP_BIAS_MASK;
+    mantissa = 0;
   }
   else {
     exponent = (exponent + EXP_BIAS) & EXP_BIAS_MASK;
   }
-
-  const percentage = Math.round(10**(MANTISSA_BITS) * (Math.abs(n) - lower) / (upper - lower)) / 10**(MANTISSA_BITS);
-
-  // Mantissa muss gerundet werden
-  const mantissa = Math.round(2**MANTISSA_BITS * percentage);
 
   console.log(`sign: ${sign} exponent: ${exponent} percentage: ${percentage} mantissa: ${mantissa}`);
   console.log(`+`.padEnd(4, '-') + `+`.padEnd(EXP_BITS + 3, '-') + `+`.padEnd(MANTISSA_BITS + 3,'-') + `+`)
@@ -57,7 +61,7 @@ Float32.decode = n => {
     return sign === 1 ? -0 : 0;
   }
 
-  if (exponent === 0b1111111111) {
+  if (exponent === 2 * EXP_BIAS + 1 & EXP_BIAS_MASK) {
     if (mantissa === 0) {
       return sign === 0 ? Infinity : -Infinity;
     } else {

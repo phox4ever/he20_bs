@@ -23,19 +23,23 @@ const encode = n => {
   const lower = exponent + EXP_BIAS > 0 ? 2**exponent : 0; // 0 falls denormalisierte Zahl
   const upper = exponent + EXP_BIAS > 0 ? 2**(exponent + 1) : 2**((EXP_BIAS - 1) * -1); // 2^-14 falls denormalisierte Zahl
 
-  // Prüfung auf Exponent Overflow und Underflow
-  if (exponent + EXP_BIAS < 0 || exponent + EXP_BIAS > 2 * EXP_BIAS + 1) {
-      exponent = 0 & 0b11111111;
-  }
-  else {
-      exponent = (exponent + EXP_BIAS) & 0b1111111111;
-  }
-
   // Berechnen der Mantisse in Prozent
   const percentage = Math.round(1000 * (Math.abs(n) - lower) / (upper - lower)) / 1000;
 
   // Runden der Mantisse
-  const mantissa = Math.round(2 ** MANTISSA_BITS * percentage);
+  let mantissa = Math.round(2 ** MANTISSA_BITS * percentage);
+
+  // Prüfung auf Exponent Overflow und Underflow
+  if (exponent + EXP_BIAS < 0) {
+      exponent = 0 & 0b11111111;
+  }
+  else if (exponent + EXP_BIAS > 2 * EXP_BIAS + 1) {
+      exponent = 2 * EXP_BIAS + 1 & 0b11111111;
+      mantissa = 0;
+  }
+  else {
+      exponent = (exponent + EXP_BIAS) & 0b1111111111;
+  }
 
   console.log(`sign: ${sign} exponent: ${exponent} percentage: ${percentage} mantissa: ${mantissa}`);
   console.log(`+`.padEnd(4, '-') + `+`.padEnd(EXP_BITS + 3, '-') + `+`.padEnd(MANTISSA_BITS + 3,'-') + `+`)
@@ -74,24 +78,27 @@ const dec2bin = function(dec, s) {
     return (dec >>> 0).toString(2).padStart(s, '0');
 }
 
-/*
-const original = 0.000052571;
-const encoded = encode(original);
-const decoded = decode(encoded);
-const infinityCheck = decode(0b0111110000000000);
-const minusInfinityCheck = decode(0b1111110000000000);
-const nanCheck = decode(0b1111110000000001);
-*/
+import readline from 'readline';
 
-//console.log(`original: ${original}`);
-//console.log(`encoded: ${encoded}`);
-//console.log(`decoded: ${decoded}`);
-//console.log(`infinity: ${infinityCheck}`);
-//console.log(`-infinity: ${minusInfinityCheck}`);
-//console.log(`nan: ${nanCheck}`);
+function askQuestion(query) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise(resolve => rl.question(query, ans => {
+    rl.close();
+    resolve(ans);
+  }))
+}
 
 const nums = [
+    0.1,
+    0.2,
+    0.3,
     1720.5,
+    172002.5345,
+    1720002.5345,
     172.8254,
     172.5254,
     172.525,
@@ -111,11 +118,29 @@ const nums = [
 ]
 
 console.log ("Half Precision (16bit)")
-nums.forEach(n => {const e = encode(n);const d = decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS + 1)} (${e}) => ${d}`);console.log() })
+for (const n of nums) {
+  console.log(`-`.repeat(70) + `\n* Number: ${n}`.padEnd(70, ' ') + `*\n` + `-`.repeat(70));
+  const e = encode(n);
+  const d = decode(e);
+  console.log(`>> Result: ${dec2bin(e, NON_SIGN_BITS + 1)} (${e}) => ${d}\n` + `=`.repeat(70));
+  const ans = await askQuestion("Continue (Y/n)? ");
+  if (ans === 'n') {
+    break;
+  }
+}
 console.log()
 // Höhere Präzision mit single precision (32 bit)
 import Float32 from './float32.js'
 import NON_SIGN_BITS32 from './float32.js'
 console.log ("Single Precision (32bit)")
-nums.forEach(n => {const e = Float32.encode(n);const d = Float32.decode(e); console.log(`${n}: ${dec2bin(e, NON_SIGN_BITS32 + 1)} (${e}) => ${d}`);console.log() })
 
+for (const n of nums) {
+  console.log(`-`.repeat(80) + `\n* Number: ${n}`.padEnd(70, ' ') + `*\n` + `-`.repeat(80));
+  const e = Float32.encode(n);
+  const d = Float32.decode(e);
+  console.log(`>> Result: ${dec2bin(e, NON_SIGN_BITS32 + 1)} (${e}) => ${d}\n` + `=`.repeat(80));
+  const ans = await askQuestion("Continue (Y/n)? ");
+  if (ans === 'n') {
+    break;
+  }
+}
